@@ -167,7 +167,7 @@
    * as an example of this.
    */
 
-  // Takes an array of objects and returns and array of the values of
+  // Takes an array of objects and returns an array of the values of
   // a certain property in it. E.g. take an array of people and return
   // an array of just their ages
   _.pluck = function(collection, key) {
@@ -425,6 +425,15 @@
   // Calls the method named by functionOrKey on each value in the list.
   // Note: You will need to learn a bit about .apply to complete this.
   _.invoke = function(collection, functionOrKey, args) {
+    if (typeof(functionOrKey) === 'string') {
+      return _.map(collection, function(element) {
+        return element[functionOrKey].apply(element,args);
+      })
+    } else {
+      return _.map(collection, function(element) {
+        return functionOrKey.apply(element, args);
+      })
+    }
   };
 
   // Sort the object's values by a criterion produced by an iterator.
@@ -432,6 +441,13 @@
   // of that string. For example, _.sortBy(people, 'name') should sort
   // an array of people by their name.
   _.sortBy = function(collection, iterator) {
+    return collection.sort(function(x, y) {
+      if (typeof(iterator) === 'string') {
+        return x[iterator] - y[iterator];
+      } else {
+        return iterator(x) - iterator(y);
+      }
+    })
   };
 
   // Zip together two or more arrays with elements of the same index
@@ -440,6 +456,26 @@
   // Example:
   // _.zip(['a','b','c','d'], [1,2,3]) returns [['a',1], ['b',2], ['c',3], ['d',undefined]]
   _.zip = function() {
+    var result = [];
+    var args = Array.prototype.slice.call(arguments);
+
+    var maxLength = function(list) {
+      var length = 0;
+      for (var l of list) {
+        if (l.length > length) {
+          length = l.length;
+        };
+      };
+      return length;
+    }(args);
+    for (var i = 0; i < maxLength; i++) {
+      var current = []
+      for (var arg of args) {
+        current.push(arg[i]);
+      };
+      result.push(current);
+    }
+    return result;
   };
 
   // Takes a multidimensional array and converts it to a one-dimensional array.
@@ -447,16 +483,30 @@
   //
   // Hint: Use Array.isArray to check if something is an array
   _.flatten = function(nestedArray, result) {
+    _.each(nestedArray, function(element) {
+      if (Array.isArray(element)) {
+        nestedArray = _.flatten(Array.prototype.concat.apply([], nestedArray));
+      };
+    });
+    return nestedArray;
   };
 
   // Takes an arbitrary number of arrays and produces an array that contains
   // every item shared between all the passed-in arrays.
   _.intersection = function() {
+    var arrays = Array.prototype.slice.call(arguments);
+    return _.filter(arrays[0], function(element) {
+      return _.reduce(arrays.slice(1), function(result, curArray) {return result && curArray.includes(element)}, true);
+    });
   };
 
   // Take the difference between one array and a number of other arrays.
   // Only the elements present in just the first array will remain.
   _.difference = function(array) {
+    var arrays = Array.prototype.slice.call(arguments);
+    return _.filter(arrays[0], function(element) {
+      return _.reduce(arrays.slice(1), function(result, curArray) {return result && !curArray.includes(element)}, true);
+    });
   };
 
   // Returns a function, that, when invoked, will only be triggered at most once
@@ -465,5 +515,6 @@
   //
   // Note: This is difficult! It may take a while to implement.
   _.throttle = function(func, wait) {
+
   };
 }());
