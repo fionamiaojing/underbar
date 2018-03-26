@@ -202,13 +202,28 @@
   _.reduce = function(collection, iterator, accumulator) {
     if (accumulator !== undefined) {
       var result = accumulator;
-      for (var i = 0; i < collection.length; i++) {
-        result = iterator(result, collection[i]);
+      if (Array.isArray(collection)) {
+        for (var i = 0; i < collection.length; i++) {
+          result = iterator(result, collection[i]);
+        }
+      } else {
+        for (var key in collection){
+          result = iterator(result, collection[key]);
+        }
       }
+
     } else {
-      var result = collection[0];
-      for (var i = 1; i < collection.length; i++) {
-        result = iterator(result, collection[i]);
+      if (Array.isArray(collection)) {
+        var result = collection[0];
+        for (var i = 1; i < collection.length; i++) {
+          result = iterator(result, collection[i]);
+        }
+      } else {
+        var keys = Object.keys(collection);
+        var result = collection[keys[0]];
+        for (var i = 1; i < keys.length; i++) {
+          result = iterator(result, collection[keys[i]]);
+        }
       }
     }
     return result;
@@ -231,12 +246,33 @@
   // Determine whether all of the elements match a truth test.
   _.every = function(collection, iterator) {
     // TIP: Try re-using reduce() here.
+    iterator = iterator || _.identity;
+    if (collection.length == 0) {
+      return true;
+    }
+
+    return _.reduce(collection, function(result, item) {
+      if (result === false) {
+        return false;
+      } else {
+        return !!iterator(item);
+      };
+    }, true)
   };
 
   // Determine whether any of the elements pass a truth test. If no iterator is
   // provided, provide a default one
   _.some = function(collection, iterator) {
     // TIP: There's a very clever way to re-use every() here.
+
+    iterator = iterator || _.identity;
+    if (collection.length == 0) {
+      return false;
+    }
+
+    return _.reduce(collection, function(result, item) {
+      return result || !!iterator(item);
+    }, false)
   };
 
 
@@ -259,11 +295,33 @@
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
   _.extend = function(obj) {
+    var destination = arguments[0];
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        destination[key] = source[key];
+      }
+    };
+    return destination;
+
   };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
+    var destination = arguments[0];
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        if (key in destination) {
+          continue;
+        } else {
+          destination[key] = source[key];
+        }
+      }
+    };
+    return destination;
+
   };
 
 
@@ -307,6 +365,16 @@
   // already computed the result for the given argument and return that value
   // instead if possible.
   _.memoize = function(func) {
+
+    var resultObject = {};
+    return function() {
+      var key = JSON.stringify(arguments);
+      if (!(key in resultObject)) {
+        resultObject[key] = func.apply(this, arguments);
+      }
+      return resultObject[key];
+    };
+
   };
 
   // Delays a function for the given number of milliseconds, and then calls
@@ -316,6 +384,11 @@
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
   _.delay = function(func, wait) {
+
+
+    var restArg = Array.prototype.slice.call(arguments, 2);
+    setTimeout(function(){func.apply(this, restArg)}, wait);
+
   };
 
 
@@ -330,6 +403,14 @@
   // input array. For a tip on how to make a copy of an array, see:
   // http://mdn.io/Array.prototype.slice
   _.shuffle = function(array) {
+    var copyArray = array.slice(0);
+    for (var i = array.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * i);
+      var temp = copyArray[j];
+      copyArray[j] = copyArray[i];
+      copyArray[i] = temp;
+    }
+    return copyArray;
   };
 
 
