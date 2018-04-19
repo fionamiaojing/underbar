@@ -235,10 +235,7 @@
     // TIP: Many iteration problems can be most easily expressed in
     // terms of reduce(). Here's a freebie to demonstrate!
     return _.reduce(collection, function(wasFound, item) {
-      if (wasFound) {
-        return true;
-      }
-      return item === target;
+      return item === target || wasFound;
     }, false);
   };
 
@@ -246,17 +243,12 @@
   // Determine whether all of the elements match a truth test.
   _.every = function(collection, iterator) {
     // TIP: Try re-using reduce() here.
-    iterator = iterator || _.identity;
     if (collection.length == 0) {
       return true;
     }
-
+    iterator = iterator || _.identity;
     return _.reduce(collection, function(result, item) {
-      if (result === false) {
-        return false;
-      } else {
-        return !!iterator(item);
-      };
+        return result && !!iterator(item);
     }, true)
   };
 
@@ -370,7 +362,8 @@
     return function() {
       var key = JSON.stringify(arguments);
       if (!(key in resultObject)) {
-        resultObject[key] = func.apply(this, arguments);
+        resultObject[key] = func.apply(null, arguments);
+        //resultObject[key] = func.apply(this, arguments);
       }
       return resultObject[key];
     };
@@ -428,6 +421,8 @@
     if (typeof(functionOrKey) === 'string') {
       return _.map(collection, function(element) {
         return element[functionOrKey].apply(element,args);
+        //'apple'.toUpperCase() => 'apple'.toUpperCase.apply('apple') =>
+        //'apple'['toUpperCase'].apply('apple') => 'APPLE';
       })
     } else {
       return _.map(collection, function(element) {
@@ -459,15 +454,20 @@
     var result = [];
     var args = Array.prototype.slice.call(arguments);
 
-    var maxLength = function(list) {
-      var length = 0;
-      for (var l of list) {
-        if (l.length > length) {
-          length = l.length;
-        };
-      };
-      return length;
-    }(args);
+    // var maxLength = function(list) {
+    //   var length = 0;
+    //   for (var l of list) {
+    //     if (l.length > length) {
+    //       length = l.length;
+    //     };
+    //   };
+    //   return length;
+    // }(args);
+
+    var maxLength = Math.max.apply(null, _.map(args, function(element) {
+      return element.length;
+    }));
+
     for (var i = 0; i < maxLength; i++) {
       var current = []
       for (var arg of args) {
@@ -483,30 +483,75 @@
   //
   // Hint: Use Array.isArray to check if something is an array
   _.flatten = function(nestedArray, result) {
+    // _.each(nestedArray, function(element) {
+    //   if (Array.isArray(element)) {
+    //     nestedArray = _.flatten(Array.prototype.concat.apply([], nestedArray));
+    //   };
+    // });
+    // return nestedArray;
+    // var result = [];
+    // for (var i = 0; i < nestedArray.length; i++) {
+    //   if (Array.isArray(nestedArray[i])) {
+    //     result.push.apply(result, _.flatten(nestedArray[i]));
+    //   } else {
+    //     result.push(nestedArray[i]);
+    //   }
+    // };
+    // return result;
+
+    var result = [];
     _.each(nestedArray, function(element) {
       if (Array.isArray(element)) {
-        nestedArray = _.flatten(Array.prototype.concat.apply([], nestedArray));
-      };
+        result.push.apply(result, _.flatten(element));
+      } else {
+        result.push(element);
+      }
     });
-    return nestedArray;
+    return result;
+
   };
 
   // Takes an arbitrary number of arrays and produces an array that contains
   // every item shared between all the passed-in arrays.
   _.intersection = function() {
     var arrays = Array.prototype.slice.call(arguments);
-    return _.filter(arrays[0], function(element) {
-      return _.reduce(arrays.slice(1), function(result, curArray) {return result && curArray.includes(element)}, true);
-    });
+    // return _.filter(arrays[0], function(element) {
+    //   return _.reduce(arrays.slice(1), function(result, curArray) {return result && curArray.includes(element)}, true);
+    // });
+    var sourceArray = arrays[0];
+    var remainArrays = arrays.slice(1);
+    var result =[]
+    for (var i = 0; i < sourceArray.length; i++) {
+      var allFound = _.reduce(remainArrays, function(acc, cur){
+        return acc && cur.includes(sourceArray[i]);
+      }, true);
+      if (allFound){
+        result.push(sourceArray[i]);
+      }
+    }
+    return result;
   };
 
   // Take the difference between one array and a number of other arrays.
   // Only the elements present in just the first array will remain.
   _.difference = function(array) {
     var arrays = Array.prototype.slice.call(arguments);
-    return _.filter(arrays[0], function(element) {
-      return _.reduce(arrays.slice(1), function(result, curArray) {return result && !curArray.includes(element)}, true);
-    });
+    // return _.filter(arrays[0], function(element) {
+    //   return _.reduce(arrays.slice(1), function(result, curArray) {return result && !curArray.includes(element)}, true);
+    // });
+
+    var sourceArray = arrays[0];
+    var remainArrays = arrays.slice(1);
+    var result =[]
+    for (var i = 0; i < sourceArray.length; i++) {
+      var allFound = _.reduce(remainArrays, function(acc, cur){
+        return acc || cur.includes(sourceArray[i]);
+      }, false);
+      if (!allFound){
+        result.push(sourceArray[i]);
+      }
+    }
+    return result;
   };
 
   // Returns a function, that, when invoked, will only be triggered at most once
@@ -515,6 +560,19 @@
   //
   // Note: This is difficult! It may take a while to implement.
   _.throttle = function(func, wait) {
-
+    var lastCalled;
+    var args = Array.prototype.slice(arguments, 2);
+    return function(){
+      if (lastCalled == undefined) {
+        lastCalled = new Date().getTime();
+        return func.apply(this, args);
+      } else {
+        var elapsed =  new Date().getTime() - lastCalled;
+        if (elapsed >= wait) {
+          lastCalled = new Date().getTime();
+          return func.apply(this, args);
+        }
+      }
+    }
   };
 }());
